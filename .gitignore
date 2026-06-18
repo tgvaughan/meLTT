@@ -2,3 +2,8 @@
 .DS_Store
 
 /target
+
+/validation/*.trees
+/validation/*.state
+/validation/*.log
+/validation/*.nex
