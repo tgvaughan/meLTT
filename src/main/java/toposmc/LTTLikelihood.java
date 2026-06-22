@@ -23,6 +23,7 @@ import beast.base.core.Input;
 import beast.base.inference.Distribution;
 import beast.base.inference.State;
 import beast.base.spec.evolution.sitemodel.SiteModel;
+import beast.base.util.Randomizer;
 
 import java.util.List;
 import java.util.Random;
@@ -44,8 +45,10 @@ public class LTTLikelihood extends Distribution {
 
     Particle[] particles;
     int nParticles;
+    double[] logWeights;
+    double[] logWeightsNormalized;
 
-    double[] tpMatrix;
+    double[] tMatrix;
 
     @Override
     public void initAndValidate() {
@@ -53,12 +56,15 @@ public class LTTLikelihood extends Distribution {
         ltt = lttInput.get();
 
         int nStates = ltt.alignment.getMaxStateCount();
-        tpMatrix = new double[nStates*nStates];
+        tMatrix = new double[nStates*nStates];
 
         nParticles = nParticlesInput.get();
         particles = new Particle[nParticles];
         for (int i=0; i<nParticles; i++)
             particles[i] = new Particle(ltt.alignment);
+
+        logWeights = new double[nParticles];
+        logWeightsNormalized = new double[nParticles];
 
         System.out.println("LTTLikelihood initialised.");
     }
@@ -79,7 +85,42 @@ public class LTTLikelihood extends Distribution {
         for (int idx=1; idx<ltt.t.length; idx++) {
 
             siteModel.getSubstitutionModel().getTransitionProbabilities(null,
-                    ltt.t[idx-1], ltt.t[idx], 1.0, tpMatrix);
+                    ltt.t[idx-1], ltt.t[idx],
+                    siteModel.getRateForCategory(0,null),
+                    tMatrix);
+
+            for (Particle p : particles) {
+                // Propagate partial likelihoods
+                p.propagateLineages(ltt.k[idx-1], tMatrix);
+
+                // Randomly pair lineages
+                int lineage1 = Randomizer.nextInt(ltt.k[idx-1]);
+                int lineage2 = Randomizer.nextInt(ltt.k[idx-1]-1);
+                if (lineage2==lineage1) lineage2 -= 1;
+                p.mergeLineages(ltt.k[idx-1], lineage1, lineage2);
+
+                // Compute weight
+                p.computeWeight(ltt.k[idx], siteModel.getSubstitutionModel().getFrequencies());
+            }
+
+            // Estimate likelihood contribution
+
+            double maxLogWeight = Double.NEGATIVE_INFINITY;
+            for (int pidx=0; pidx<nParticles; pidx++) {
+                logWeights[pidx] = particles[pidx].logWeight;
+                maxLogWeight = Math.max(maxLogWeight, logWeights[pidx]);
+            }
+
+
+            double cumsum = 0.0;
+            for (int pidx=0; pidx<nParticles; pidx++) {
+                logWeightsNormalized[pidx] = Math.exp(logWeights[pidx] - maxLogWeight);
+                cumsum += logWeightsNormalized[pidx];
+            }
+
+
+//            siteModel.getSubstitutionModel().getTransitionProbabilities(null,
+//                    ltt.t[idx-1], ltt.t[idx], 1.0, tpMatrix);
 
 
         }
