@@ -208,4 +208,10 @@ public class LTT extends CalculationNode {
         updateLTT();
         return true;
     }
+
+    @Override
+    protected void restore() {
+        super.restore();
+        updateLTT();
+    }
 }

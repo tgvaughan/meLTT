@@ -34,7 +34,7 @@ public class LTTLikelihood extends Distribution {
             "Lineage through time plot (relative interval )", Input.Validate.REQUIRED);
 
     public Input<Integer> nParticlesInput = new Input<>("nParticles",
-            "Number of particles to use in the SMC.", 5000);
+            "Number of particles to use in the SMC.", 50);
 
     public Input<SiteModel> siteModelInput = new Input<>("siteModel",
             "Site model describing evolution of sites.",
