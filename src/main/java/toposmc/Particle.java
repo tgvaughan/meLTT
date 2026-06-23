@@ -102,4 +102,13 @@ public class Particle {
 
         logWeight = 0.0;
     }
+
+    public void assignFrom(Particle other, int k) {
+        for (int lineageIdx=0; lineageIdx<k; lineageIdx++) {
+            System.arraycopy(other.state[lineageIdx], 0,
+                    state[lineageIdx], 0, state.length);
+        }
+        logWeight = other.logWeight;
+        logWeightPrev = other.logWeightPrev;
+    }
 }

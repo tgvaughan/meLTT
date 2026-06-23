@@ -43,10 +43,9 @@ public class LTTLikelihood extends Distribution {
     SiteModel siteModel;
     LTT ltt;
 
-    Particle[] particles;
+    Particle[] particles, particlesPrime;
     int nParticles;
-    double[] logWeights;
-    double[] logWeightsNormalized;
+    double[] logWeights, weightsWorking;
 
     double[] tMatrix;
 
@@ -60,11 +59,14 @@ public class LTTLikelihood extends Distribution {
 
         nParticles = nParticlesInput.get();
         particles = new Particle[nParticles];
-        for (int i=0; i<nParticles; i++)
+        particlesPrime = new Particle[nParticles];
+        for (int i=0; i<nParticles; i++) {
             particles[i] = new Particle(ltt.alignment);
+            particlesPrime[i] = new Particle(ltt.alignment);
+        }
 
         logWeights = new double[nParticles];
-        logWeightsNormalized = new double[nParticles];
+        weightsWorking = new double[nParticles];
 
         System.out.println("LTTLikelihood initialised.");
     }
@@ -111,18 +113,38 @@ public class LTTLikelihood extends Distribution {
                 maxLogWeight = Math.max(maxLogWeight, logWeights[pidx]);
             }
 
+            int nextParticleToAssign = 0;
 
-            double cumsum = 0.0;
+            double cumSum = 0.0;
             for (int pidx=0; pidx<nParticles; pidx++) {
-                logWeightsNormalized[pidx] = Math.exp(logWeights[pidx] - maxLogWeight);
-                cumsum += logWeightsNormalized[pidx];
+                weightsWorking[pidx] = Math.exp(logWeights[pidx] - maxLogWeight);
+                cumSum += weightsWorking[pidx];
+            }
+            double cumSumResiduals = 0.0;
+            for (int pidx=0; pidx<nParticles; pidx++) {
+                weightsWorking[pidx] *= nParticles / cumSum;
+
+                int nForSure = (int) weightsWorking[pidx];
+                weightsWorking[pidx] -= nForSure;
+                cumSumResiduals += weightsWorking[pidx];
+
+                for (int i=0; i<nForSure; i++)
+                    particlesPrime[nextParticleToAssign++].assignFrom(particles[pidx], ltt.k[idx]);
+            }
+            for (int pidx=0; pidx<nParticles; pidx++) {
+                weightsWorking[pidx] /= cumSumResiduals;
             }
 
-
-//            siteModel.getSubstitutionModel().getTransitionProbabilities(null,
-//                    ltt.t[idx-1], ltt.t[idx], 1.0, tpMatrix);
-
-
+            if (idx==ltt.t.length-1) {
+                logP = Math.log(cumSum) + maxLogWeight;
+            } else {
+                ReplacementSampler replacementSampler = new ReplacementSampler(weightsWorking);
+                for (int i=nextParticleToAssign; i<nParticles; i++)
+                    particlesPrime[i].assignFrom(particles[replacementSampler.next()], ltt.k[idx]);
+                Particle[] tmp = particles;
+                particles = particlesPrime;
+                particlesPrime = tmp;
+            }
         }
         return logP;
     }
