@@ -18,50 +18,53 @@
         <sequence id="seq_Tarsius_syrichta" spec="Sequence" taxon="Tarsius_syrichta" totalcount="4" value="AAGTTTCATTGGAGCCACCACTCTTATAATTGCCCATGGCCTCACCTCCTCCCTATTATTTTGCCTAGCAAATACAAACTACGAACGAGTCCACAGTCGAACAATAGCACTAGCCCGTGGCCTTCAAACCCTATTACCTCTTGCAGCAACATGATGACTCCTCGCCAGCTTAACCAACCTGGCCCTTCCCCCAACAATTAATTTAATCGGTGAACTGTCCGTAATAATAGCAGCATTTTCATGGTCACACCTAACTATTATCTTAGTAGGCCTTAACACCCTTATCACCGCCCTATATTCCCTATATATACTAATCATAACTCAACGAGGAAAATACACATATCATATCAACAATATCATGCCCCCTTTCACCCGAGAAAATACATTAATAATCATACACCTATTTCCCTTAATCCTACTATCTACCAACCCCAAAGTAATTATAGGAACCATGTACTGTAAATATAGTTTAAACAAAACATTAGATTGTGAGTCTAATAATAGAAGCCCAAAGATTTCTTATTTACCAAGAAAGTA-TGCAAGAACTGCTAACTCATGCCTCCATATATAACAATGTGGCTTTCTT-ACTTTTAAAGGATAGAAGTAATCCATCGGTCTTAGGAACCGAAAA-ATTGGTGCAACTCCAAATAAAAGTAATAAATTTATTTTCATCCTCCATTTTACTATCACTTACACTCTTAATTACCCCATTTATTATTACAACAACTAAAAAATATGAAACACATGCATACCCTTACTACGTAAAAAACTCTATCGCCTGCGCATTTATAACAAGCCTAGTCCCAATGCTCATATTTCTATACACAAATCAAGAAATAATCATTTCCAACTGACATTGAATAACGATTCATACTATCAAATTATGCCTAAGCTT"/>
     </data>
 
-    <run id="mcmc" spec="MCMC" chainLength="10000000">
-        <state id="state" spec="State" storeEvery="5000">
-            <stateNode id="relCoalIntervals" spec="beast.base.spec.inference.parameter.SimplexParam" value="1"/>
-            <stateNode id="tMRCA" spec="beast.base.spec.inference.parameter.RealScalarParam" value="0"/>
-            <stateNode id="birthRate" spec="beast.base.spec.inference.parameter.RealScalarParam" domain="PositiveReal" value="1.0"/>
-        </state>
-        <distribution id="posterior" spec="CompoundDistribution">
-            <distribution id="prior" spec="CompoundDistribution">
-                <distribution id="YuleBirthRatePrior" spec="beast.base.spec.inference.distribution.Gamma" param="@birthRate">
-                    <alpha id="RealScalarParam.2" spec="beast.base.spec.inference.parameter.RealScalarParam" domain="Real" estimate="false" value="0.01"/>
-                    <theta id="RealScalarParam.3" spec="beast.base.spec.inference.parameter.RealScalarParam" domain="PositiveReal" estimate="false" value="100.0"/>
-                </distribution>
-                <!-- TODO: add LTT prior -->
-            </distribution>
-            <distribution id="likelihood" spec="CompoundDistribution" useThreads="true">
-                <distribution id="lttLikelihood" spec="toposmc.LTTLikelihood">
-                    <ltt id="ltt" spec="toposmc.LTT" relCoalIntervals="@relCoalIntervals" tMRCA="@tMRCA" alignment="@alignment"/>
-                    <siteModel id="siteModel" spec="beast.base.spec.evolution.sitemodel.SiteModel">
-                        <mutationRate id="mutationRate" spec="beast.base.spec.inference.parameter.RealScalarParam" domain="PositiveReal" estimate="false" value="1.0"/>
-                        <shape id="gammaShape" spec="beast.base.spec.inference.parameter.RealScalarParam" domain="PositiveReal" estimate="false" value="1.0"/>
-                        <proportionInvariant id="proportionInvariant" spec="beast.base.spec.inference.parameter.RealScalarParam" domain="UnitInterval" estimate="false"/>
-                        <substModel id="JC69" spec="beast.base.spec.evolution.substitutionmodel.JukesCantor"/>
-                    </siteModel>
-                </distribution>
+    <run id="mcmc" spec="MCMC" chainLength="10000">
+      <state id="state" spec="State" storeEvery="5000">
+        <stateNode id="relCoalIntervals" spec="beast.base.spec.inference.parameter.SimplexParam" value="1"/>
+        <stateNode id="tMRCA" spec="beast.base.spec.inference.parameter.RealScalarParam" value="0"/>
+        <stateNode id="Ne" spec="beast.base.spec.inference.parameter.RealScalarParam" domain="PositiveReal" value="1.0"/>
+      </state>
+      <distribution id="posterior" spec="CompoundDistribution">
+        <distribution id="prior" spec="CompoundDistribution">
+            <distribution id="NePrior" spec="beast.base.spec.inference.distribution.Exponential" param="@Ne" mean="1.0"/>
+          <!-- TODO: add LTT prior -->
+            <distribution  id="coalPrior" spec="toposmc.CoalescentLTTPrior" ltt="@ltt">
+                <populationFunction spec="beast.base.spec.evolution.tree.coalescent.ConstantPopulation" popSize="@Ne"/>
             </distribution>
         </distribution>
-        <operator id="YuleBirthRateScaler" spec="beast.base.spec.inference.operator.ScaleOperator" parameter="@birthRate" upper="10.0" weight="3.0"/>
-        <operator id="tMRCAScaler" spec="beast.base.spec.inference.operator.ScaleOperator" parameter="@tMRCA" weight="3.0"/>
-        <operator id="relCoalIntervalsExchanger" spec="beast.base.spec.inference.operator.DeltaExchangeOperator" parameter="@relCoalIntervals" weight="3.0"/>
-        <logger id="tracelog" spec="Logger" fileName="$(filebase).log" logEvery="1000" model="@posterior" sanitiseHeaders="true" sort="smart">
-            <log idref="posterior"/>
-            <log idref="likelihood"/>
-            <log idref="prior"/>
-            <log idref="lttLikelihood"/>
-            <log idref="birthRate"/>
-        </logger>
-        <logger id="screenlog" spec="Logger" logEvery="1">
-            <log idref="posterior"/>
-            <log idref="likelihood"/>
-            <log idref="prior"/>
-            <log idref="birthRate"/>
-            <log idref="tMRCA"/>
-        </logger>
-        <operatorschedule id="OperatorSchedule" spec="OperatorSchedule"/>
+        <distribution id="likelihood" spec="CompoundDistribution" useThreads="true">
+          <distribution id="lttLikelihood" spec="toposmc.LTTLikelihood">
+            <ltt id="ltt" spec="toposmc.LTT" relCoalIntervals="@relCoalIntervals" tMRCA="@tMRCA"
+                 alignment="@alignment"/>
+            <siteModel id="siteModel" spec="beast.base.spec.evolution.sitemodel.SiteModel">
+              <mutationRate id="mutationRate" spec="beast.base.spec.inference.parameter.RealScalarParam" domain="PositiveReal" estimate="false" value="1.0"/>
+              <shape id="gammaShape" spec="beast.base.spec.inference.parameter.RealScalarParam" domain="PositiveReal" estimate="false" value="1.0"/>
+              <proportionInvariant id="proportionInvariant" spec="beast.base.spec.inference.parameter.RealScalarParam" domain="UnitInterval" estimate="false"/>
+              <substModel id="JC69" spec="beast.base.spec.evolution.substitutionmodel.JukesCantor"/>
+            </siteModel>
+          </distribution>
+        </distribution>
+      </distribution>
+      <operator id="NeScaler" spec="beast.base.spec.inference.operator.ScaleOperator" parameter="@Ne" upper="10.0" weight="1.0"/>
+      <operator id="tMRCAScaler" spec="beast.base.spec.inference.operator.ScaleOperator" parameter="@tMRCA" weight="1.0"/>
+      <operator id="relCoalIntervalsExchanger" spec="beast.base.spec.inference.operator.DeltaExchangeOperator" parameter="@relCoalIntervals" weight="11.0"/>
+       <logger id="tracelog" spec="Logger" fileName="$(filebase).log" logEvery="10" model="@posterior" sanitiseHeaders="true" sort="smart">
+           <log idref="posterior"/>
+           <log idref="likelihood"/>
+           <log idref="prior"/>
+           <log idref="Ne"/>
+           <log idref="tMRCA"/>
+           <log idref="relCoalIntervals"/>
+       </logger>
+      <logger id="screenlog" spec="Logger" logEvery="10">
+        <log idref="posterior"/>
+        <log idref="likelihood"/>
+        <log idref="prior"/>
+        <log idref="Ne"/>
+        <log idref="tMRCA"/>
+        <log idref="relCoalIntervals"/>
+      </logger>
+      <operatorschedule id="OperatorSchedule" spec="OperatorSchedule"/>
     </run>
 
-</beast>
+  </beast>

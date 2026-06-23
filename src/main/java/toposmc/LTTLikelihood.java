@@ -34,7 +34,7 @@ public class LTTLikelihood extends Distribution {
             "Lineage through time plot (relative interval )", Input.Validate.REQUIRED);
 
     public Input<Integer> nParticlesInput = new Input<>("nParticles",
-            "Number of particles to use in the SMC.", 1000);
+            "Number of particles to use in the SMC.", 5000);
 
     public Input<SiteModel> siteModelInput = new Input<>("siteModel",
             "Site model describing evolution of sites.",
@@ -84,7 +84,9 @@ public class LTTLikelihood extends Distribution {
         for (Particle p : particles)
             p.reset();
 
-        for (int idx=1; idx<ltt.t.length; idx++) {
+        int idx=0;
+        while (true) {
+            idx += 1;
 
             siteModel.getSubstitutionModel().getTransitionProbabilities(null,
                     ltt.t[idx], ltt.t[idx-1],
@@ -95,7 +97,7 @@ public class LTTLikelihood extends Distribution {
                 // Propagate partial likelihoods
                 p.propagateLineages(ltt.k[idx-1], tMatrix);
 
-                // Randomly pair lineages
+                // Randomly merge lineages
                 int lineage1 = Randomizer.nextInt(ltt.k[idx-1]);
                 int lineage2 = 1+Randomizer.nextInt(ltt.k[idx-1]-1);
                 if (lineage2==lineage1) lineage2 -= 1;
@@ -120,6 +122,13 @@ public class LTTLikelihood extends Distribution {
                 weightsWorking[pidx] = Math.exp(logWeights[pidx] - maxLogWeight);
                 cumSum += weightsWorking[pidx];
             }
+
+            if (idx==ltt.t.length-1) {
+                // We're done.  Compute final likelihood estimate and quit.
+                logP = Math.log(cumSum) + maxLogWeight - Math.log(nParticles);
+                return logP;
+            }
+
             double cumSumResiduals = 0.0;
             for (int pidx=0; pidx<nParticles; pidx++) {
                 weightsWorking[pidx] *= nParticles / cumSum;
@@ -135,18 +144,13 @@ public class LTTLikelihood extends Distribution {
                 weightsWorking[pidx] /= cumSumResiduals;
             }
 
-            if (idx==ltt.t.length-1) {
-                logP = Math.log(cumSum) + maxLogWeight;
-            } else {
-                ReplacementSampler replacementSampler = new ReplacementSampler(weightsWorking);
-                for (int i=nextParticleToAssign; i<nParticles; i++)
-                    particlesPrime[i].assignFrom(particles[replacementSampler.next()], ltt.k[idx]);
-                Particle[] tmp = particles;
-                particles = particlesPrime;
-                particlesPrime = tmp;
-            }
+            ReplacementSampler replacementSampler = new ReplacementSampler(weightsWorking);
+            for (int i=nextParticleToAssign; i<nParticles; i++)
+                particlesPrime[i].assignFrom(particles[replacementSampler.next()], ltt.k[idx]);
+            Particle[] tmp = particles;
+            particles = particlesPrime;
+            particlesPrime = tmp;
         }
-        return logP;
     }
 
     @Override
