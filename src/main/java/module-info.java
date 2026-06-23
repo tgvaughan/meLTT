@@ -9,5 +9,6 @@ open module toposmc {
 
     provides beast.base.core.BEASTInterface with
             toposmc.LTTLikelihood,
-            toposmc.LTT;
+            toposmc.LTT,
+            toposmc.CoalescentLTTPrior;
 }
