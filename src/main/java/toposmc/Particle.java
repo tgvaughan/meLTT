@@ -26,21 +26,25 @@ public class Particle {
     double[][] initialState, state;
     double[] working;
     int nPatterns;
+    int[] patternWeights;
     int nChars;
 
-    double logWeight, logWeightPrev;
+    double logForestLik, logPrevForestLik, logWeight;
 
     public Particle(Alignment alignment) {
         nChars = alignment.getMaxStateCount();
         nPatterns = alignment.getPatternCount();
+        patternWeights = alignment.getWeights();
 
         initialState = new double[alignment.getTaxonCount()][nChars*nPatterns];
         state = new double[alignment.getTaxonCount()][nChars*nPatterns];
         working = new double[nChars];
 
         for (int i=0; i<alignment.getTaxonCount(); i++) {
-            for (int j=0; j<nPatterns; j++) {
-                initialState[i][j*nChars + alignment.getPattern(i, j)] = 1.0;
+            for (int patIdx=0; patIdx<nPatterns; patIdx++) {
+                int code = alignment.getPattern(i, patIdx);
+                for (int s : alignment.getDataType().getStatesForCode(code))
+                    initialState[i][patIdx*nChars + s] = 1.0;
             }
         }
     }
@@ -84,31 +88,36 @@ public class Particle {
     }
 
     public void computeWeight(int k, double[] frequencies) {
-        logWeight = 0.0;
+        logForestLik = 0.0;
         for (int lineageIdx=0; lineageIdx<k; lineageIdx++) {
             for (int patIdx=0; patIdx<nPatterns; patIdx++) {
                 double siteWeight = 0.0;
                 for (int charIdx=0; charIdx<nChars; charIdx++) {
                     siteWeight += state[lineageIdx][patIdx*nChars + charIdx]*frequencies[charIdx];
                 }
-                logWeight += Math.log(siteWeight);
+                logForestLik += Math.log(siteWeight)*patternWeights[patIdx];
             }
         }
+        logWeight = logForestLik - logPrevForestLik;
+        logPrevForestLik = logForestLik;
     }
 
     public void reset() {
         for (int i=0; i<initialState.length; i++)
             System.arraycopy(initialState[i], 0, state[i], 0, initialState[i].length);
 
+        logForestLik = 0.0;
+        logPrevForestLik = 0.0;
         logWeight = 0.0;
     }
 
     public void assignFrom(Particle other, int k) {
         for (int lineageIdx=0; lineageIdx<k; lineageIdx++) {
             System.arraycopy(other.state[lineageIdx], 0,
-                    state[lineageIdx], 0, state.length);
+                    state[lineageIdx], 0, state[lineageIdx].length);
         }
         logWeight = other.logWeight;
-        logWeightPrev = other.logWeightPrev;
+        logForestLik = other.logForestLik;
+        logPrevForestLik = other.logPrevForestLik;
     }
 }

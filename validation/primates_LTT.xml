@@ -33,7 +33,7 @@
                 <!-- TODO: add LTT prior -->
             </distribution>
             <distribution id="likelihood" spec="CompoundDistribution" useThreads="true">
-                <distribution id="lttLikelihood" spec="toposmc.LTTLikelihood" nParticles="100">
+                <distribution id="lttLikelihood" spec="toposmc.LTTLikelihood">
                     <ltt id="ltt" spec="toposmc.LTT" relCoalIntervals="@relCoalIntervals" tMRCA="@tMRCA" alignment="@alignment"/>
                     <siteModel id="siteModel" spec="beast.base.spec.evolution.sitemodel.SiteModel">
                         <mutationRate id="mutationRate" spec="beast.base.spec.inference.parameter.RealScalarParam" domain="PositiveReal" estimate="false" value="1.0"/>
@@ -54,10 +54,12 @@
             <log idref="lttLikelihood"/>
             <log idref="birthRate"/>
         </logger>
-        <logger id="screenlog" spec="Logger" logEvery="1000">
+        <logger id="screenlog" spec="Logger" logEvery="1">
             <log idref="posterior"/>
             <log idref="likelihood"/>
             <log idref="prior"/>
+            <log idref="birthRate"/>
+            <log idref="tMRCA"/>
         </logger>
         <operatorschedule id="OperatorSchedule" spec="OperatorSchedule"/>
     </run>

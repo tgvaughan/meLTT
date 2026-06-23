@@ -34,7 +34,7 @@ public class LTTLikelihood extends Distribution {
             "Lineage through time plot (relative interval )", Input.Validate.REQUIRED);
 
     public Input<Integer> nParticlesInput = new Input<>("nParticles",
-            "Number of particles to use in the SMC.", 100);
+            "Number of particles to use in the SMC.", 1000);
 
     public Input<SiteModel> siteModelInput = new Input<>("siteModel",
             "Site model describing evolution of sites.",
@@ -87,7 +87,7 @@ public class LTTLikelihood extends Distribution {
         for (int idx=1; idx<ltt.t.length; idx++) {
 
             siteModel.getSubstitutionModel().getTransitionProbabilities(null,
-                    ltt.t[idx-1], ltt.t[idx],
+                    ltt.t[idx], ltt.t[idx-1],
                     siteModel.getRateForCategory(0,null),
                     tMatrix);
 
@@ -97,7 +97,7 @@ public class LTTLikelihood extends Distribution {
 
                 // Randomly pair lineages
                 int lineage1 = Randomizer.nextInt(ltt.k[idx-1]);
-                int lineage2 = Randomizer.nextInt(ltt.k[idx-1]-1);
+                int lineage2 = 1+Randomizer.nextInt(ltt.k[idx-1]-1);
                 if (lineage2==lineage1) lineage2 -= 1;
                 p.mergeLineages(ltt.k[idx-1], lineage1, lineage2);
 
@@ -166,5 +166,10 @@ public class LTTLikelihood extends Distribution {
 
     public static void main(String[] args) {
         System.out.println("Testing.");
+    }
+
+    @Override
+    public boolean isStochastic() {
+        return true;
     }
 }
