@@ -98,10 +98,7 @@ public class LTTLikelihood extends Distribution {
                 p.propagateLineages(ltt.k[idx-1], tMatrix);
 
                 // Randomly merge lineages
-                int lineage1 = Randomizer.nextInt(ltt.k[idx-1]);
-                int lineage2 = 1+Randomizer.nextInt(ltt.k[idx-1]-1);
-                if (lineage2==lineage1) lineage2 -= 1;
-                p.mergeLineages(ltt.k[idx-1], lineage1, lineage2);
+                p.mergeLineages(ltt.k[idx-1]);
 
                 // Compute weight
                 p.computeWeight(ltt.k[idx], siteModel.getSubstitutionModel().getFrequencies());

@@ -20,6 +20,9 @@
 package meltt;
 
 import beast.base.evolution.alignment.Alignment;
+import beast.base.util.Randomizer;
+
+import java.util.Random;
 
 public class Particle {
 
@@ -30,6 +33,8 @@ public class Particle {
     int nChars;
 
     double logForestLik, logPrevForestLik, logWeight;
+
+    double[] mergeProbs;
 
     public Particle(Alignment alignment) {
         nChars = alignment.getMaxStateCount();
@@ -47,6 +52,8 @@ public class Particle {
                     initialState[i][patIdx*nChars + s] = 1.0;
             }
         }
+
+        mergeProbs = new double[state.length*(state.length-1)/2];
     }
 
     public void propagateLineages(int k, double[] tMatrix) {
@@ -63,15 +70,23 @@ public class Particle {
         }
     }
 
-    public void mergeLineages(int k, int lineage1, int lineage2) {
+    public void mergeLineages(int k) {
 
-        // Enforce lineage1<lineage2
-        int tmp;
-        if (lineage1>lineage2) {
-            tmp = lineage1;
-            lineage1 = lineage2;
-            lineage2 = tmp;
-        }
+//        int lineage1 = Randomizer.nextInt(k);
+//        int lineage2 = 1+Randomizer.nextInt(k-1);
+//        if (lineage2==lineage1) lineage2 -= 1;
+
+//        // Enforce lineage1<lineage2
+//        int tmp;
+//        if (lineage1>lineage2) {
+//            tmp = lineage1;
+//            lineage1 = lineage2;
+//            lineage2 = tmp;
+//        }
+
+        int mergePair = computeMergeProbsAndSample(k);
+        int lineage2 = (int)((Math.sqrt(mergePair*8+1)-1)/2.0)+1;
+        int lineage1 = mergePair - lineage2*(lineage2-1)/2;
 
         // Compute the merged lineage likelihoods and store in the space occupied
         // by lineage1
@@ -87,6 +102,46 @@ public class Particle {
         }
     }
 
+    public int computeMergeProbsAndSample(int k) {
+
+        int pIdx=0;
+        double maxVal = Double.NEGATIVE_INFINITY;
+        for (int i=0; i<k; i++) {
+            for (int j=0; j<i; j++) {
+                mergeProbs[pIdx] = 0.0;
+
+                for (int patIdx=0; patIdx<nPatterns; patIdx++) {
+                    double siteContrib = 0.0;
+                    for (int charIdx=0; charIdx<nChars; charIdx++) {
+                        siteContrib += state[i][patIdx*nChars+charIdx]*state[j][patIdx*nChars+charIdx];
+                    }
+                    mergeProbs[pIdx] += Math.log(siteContrib);
+                }
+
+                maxVal = Math.max(maxVal, mergeProbs[pIdx]);
+
+                pIdx+=1;
+            }
+        }
+
+        double cumsum = 0.0;
+        for (pIdx=0; pIdx<k*(k-1)/2; pIdx++) {
+            mergeProbs[pIdx] =  Math.exp(mergeProbs[pIdx] - maxVal);
+            cumsum += mergeProbs[pIdx];
+        }
+
+        double u = Randomizer.nextDouble()*cumsum;
+        int mergePair;
+        for (mergePair=0; mergePair<k*(k-1)/2; mergePair++) {
+            u -= mergeProbs[mergePair];
+            if (u<0)
+                break;
+        }
+
+        logWeight = -Math.log(mergeProbs[mergePair]) + Math.log(cumsum);
+        return mergePair;
+    }
+
     public void computeWeight(int k, double[] frequencies) {
         logForestLik = 0.0;
         for (int lineageIdx=0; lineageIdx<k; lineageIdx++) {
@@ -98,7 +153,7 @@ public class Particle {
                 logForestLik += Math.log(siteWeight)*patternWeights[patIdx];
             }
         }
-        logWeight = logForestLik - logPrevForestLik;
+        logWeight += logForestLik - logPrevForestLik;
         logPrevForestLik = logForestLik;
     }
 
