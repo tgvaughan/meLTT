@@ -1,4 +1,4 @@
-package toposmc;
+package meltt;
 
 /******************************************************************************
  * Author: Keith Schwarz (htiek@cs.stanford.edu)

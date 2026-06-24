@@ -1,14 +1,14 @@
-open module toposmc {
+open module meltt {
     requires beast.pkgmgmt;
     requires beast.base;
     requires org.apache.commons.statistics.distribution;
     requires java.xml;
     requires javafx.base;
 
-    exports toposmc;
+    exports meltt;
 
     provides beast.base.core.BEASTInterface with
-            toposmc.LTTLikelihood,
-            toposmc.LTT,
-            toposmc.CoalescentLTTPrior;
+            meltt.LTTLikelihood,
+            meltt.LTT,
+            meltt.CoalescentLTTPrior;
 }

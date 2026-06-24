@@ -5,13 +5,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.github.tgvaughan</groupId>
-    <artifactId>TopoSMC</artifactId>
+    <artifactId>meLTT</artifactId>
     <version>0.0.1</version>
 
-    <name>TopoSMC</name>
+    <name>meLTT</name>
     <description>LTT Likelihood Computation Engine</description>
 
-    <url>https://github.com/tgvaughan/TopoSMC</url>
+    <url>https://github.com/tgvaughan/meLTT</url>
 
     <licenses>
         <license>
@@ -28,9 +28,9 @@
     </developers>
 
     <scm>
-        <connection>scm:git:git://github.com/tgvaughan/TopoSMC.git</connection>
-        <developerConnection>scm:git:ssh://github.com:tgvaughan/TopoSMC.git</developerConnection>
-        <url>https://github.com/tgvaughan/TopoSMC</url>
+        <connection>scm:git:git://github.com/tgvaughan/meLTT.git</connection>
+        <developerConnection>scm:git:ssh://github.com:tgvaughan/meLTT.git</developerConnection>
+        <url>https://github.com/tgvaughan/meLTT</url>
     </scm>
 
     <properties>

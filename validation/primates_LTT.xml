@@ -28,13 +28,13 @@
         <distribution id="prior" spec="CompoundDistribution">
             <distribution id="NePrior" spec="beast.base.spec.inference.distribution.Exponential" param="@Ne" mean="1.0"/>
           <!-- TODO: add LTT prior -->
-            <distribution  id="coalPrior" spec="toposmc.CoalescentLTTPrior" ltt="@ltt">
+            <distribution id="coalPrior" spec="meltt.CoalescentLTTPrior" ltt="@ltt">
                 <populationFunction spec="beast.base.spec.evolution.tree.coalescent.ConstantPopulation" popSize="@Ne"/>
             </distribution>
         </distribution>
         <distribution id="likelihood" spec="CompoundDistribution" useThreads="true">
-          <distribution id="lttLikelihood" spec="toposmc.LTTLikelihood">
-            <ltt id="ltt" spec="toposmc.LTT" relCoalIntervals="@relCoalIntervals" tMRCA="@tMRCA"
+          <distribution id="lttLikelihood" spec="meltt.LTTLikelihood" nParticles="50">
+            <ltt id="ltt" spec="meltt.LTT" relCoalIntervals="@relCoalIntervals" tMRCA="@tMRCA"
                  alignment="@alignment"/>
             <siteModel id="siteModel" spec="beast.base.spec.evolution.sitemodel.SiteModel">
               <mutationRate id="mutationRate" spec="beast.base.spec.inference.parameter.RealScalarParam" domain="PositiveReal" estimate="false" value="1.0"/>
@@ -46,8 +46,8 @@
         </distribution>
       </distribution>
       <operator id="NeScaler" spec="beast.base.spec.inference.operator.ScaleOperator" parameter="@Ne" upper="10.0" weight="1.0"/>
-      <operator id="tMRCAScaler" spec="beast.base.spec.inference.operator.ScaleOperator" parameter="@tMRCA" weight="1.0"/>
-      <operator id="relCoalIntervalsExchanger" spec="beast.base.spec.inference.operator.DeltaExchangeOperator" parameter="@relCoalIntervals" weight="11.0"/>
+      <operator id="tMRCAScaler" spec="beast.base.spec.inference.operator.ScaleOperator" parameter="@tMRCA" scaleFactor="0.1" weight="1.0"/>
+      <operator id="relCoalIntervalsExchanger" spec="beast.base.spec.inference.operator.DeltaExchangeOperator" parameter="@relCoalIntervals" delta="0.1" autoOptimize="false" weight="11.0"/>
        <logger id="tracelog" spec="Logger" fileName="$(filebase).log" logEvery="10" model="@posterior" sanitiseHeaders="true" sort="smart">
            <log idref="posterior"/>
            <log idref="likelihood"/>
@@ -56,7 +56,7 @@
            <log idref="tMRCA"/>
            <log idref="relCoalIntervals"/>
        </logger>
-      <logger id="screenlog" spec="Logger" logEvery="10">
+      <logger id="screenlog" spec="Logger" logEvery="100">
         <log idref="posterior"/>
         <log idref="likelihood"/>
         <log idref="prior"/>
