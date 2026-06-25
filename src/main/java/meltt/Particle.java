@@ -20,9 +20,11 @@
 package meltt;
 
 import beast.base.evolution.alignment.Alignment;
+import beast.base.evolution.distance.Distance;
+import beast.base.evolution.distance.JukesCantorDistance;
 import beast.base.util.Randomizer;
 
-import java.util.Random;
+import java.util.Arrays;
 
 public class Particle {
 
@@ -31,21 +33,26 @@ public class Particle {
     int nPatterns;
     int[] patternWeights;
     int nChars;
+    int nTaxa;
 
     double logForestLik, logPrevForestLik, logWeight;
 
-    double[] mergeProbs;
+    double[][] initialDistMatrix, distMatrix, mergeProbs;
+    int[] cladeSizes;
+    int mergeLineage2, mergeLineage1;
+    double minDist;
 
     public Particle(Alignment alignment) {
         nChars = alignment.getMaxStateCount();
         nPatterns = alignment.getPatternCount();
         patternWeights = alignment.getWeights();
+        nTaxa = alignment.getTaxonCount();
 
-        initialState = new double[alignment.getTaxonCount()][nChars*nPatterns];
-        state = new double[alignment.getTaxonCount()][nChars*nPatterns];
+        initialState = new double[nTaxa][nChars*nPatterns];
+        state = new double[nTaxa][nChars*nPatterns];
         working = new double[nChars];
 
-        for (int i=0; i<alignment.getTaxonCount(); i++) {
+        for (int i=0; i<nTaxa; i++) {
             for (int patIdx=0; patIdx<nPatterns; patIdx++) {
                 int code = alignment.getPattern(i, patIdx);
                 for (int s : alignment.getDataType().getStatesForCode(code))
@@ -53,7 +60,23 @@ public class Particle {
             }
         }
 
-        mergeProbs = new double[state.length*(state.length-1)/2];
+        JukesCantorDistance distanceFunc = new JukesCantorDistance();
+        distanceFunc.setPatterns(alignment);
+        distMatrix = new double[nTaxa][nTaxa];
+        initialDistMatrix = new double[nTaxa][nTaxa];
+        cladeSizes = new int[nTaxa];
+        minDist = Double.POSITIVE_INFINITY;
+        for (int i=1; i<nTaxa; i++) {
+            cladeSizes[i]=1;
+            for (int j=0; j<i; j++) {
+                distMatrix[i][j] = distanceFunc.pairwiseDistance(i,j);
+                initialDistMatrix[i][j] = distMatrix[i][j];
+                if (distMatrix[i][j]<minDist)
+                    minDist = distMatrix[i][j];
+            }
+        }
+
+        mergeProbs = new double[nTaxa][nTaxa];
     }
 
     public void propagateLineages(int k, double[] tMatrix) {
@@ -72,74 +95,62 @@ public class Particle {
 
     public void mergeLineages(int k) {
 
-//        int lineage1 = Randomizer.nextInt(k);
-//        int lineage2 = 1+Randomizer.nextInt(k-1);
-//        if (lineage2==lineage1) lineage2 -= 1;
-
-//        // Enforce lineage1<lineage2
-//        int tmp;
-//        if (lineage1>lineage2) {
-//            tmp = lineage1;
-//            lineage1 = lineage2;
-//            lineage2 = tmp;
-//        }
-
-        int mergePair = computeMergeProbsAndSample(k);
-        int lineage2 = (int)((Math.sqrt(mergePair*8+1)-1)/2.0)+1;
-        int lineage1 = mergePair - lineage2*(lineage2-1)/2;
+        computeMergeProbsAndSample(k);
 
         // Compute the merged lineage likelihoods and store in the space occupied
         // by lineage1
-        for (int i=0; i<state[lineage1].length; i++) {
-            state[lineage1][i] *= state[lineage2][i];
+        for (int i = 0; i<state[mergeLineage1].length; i++) {
+            state[mergeLineage1][i] *= state[mergeLineage2][i];
         }
+
+        // Compute merged distance matrices and clade sizes
+        int n1 = cladeSizes[mergeLineage1];
+        int n2 = cladeSizes[mergeLineage2];
+        int ntot = n1+n2;
+        for (int i=0; i<state[mergeLineage1].length; i++) {
+            if (i==mergeLineage1 || i==mergeLineage2)
+                continue;
+
+
+            distMatrix[mergeLineage1][i] =
+                    (distMatrix[mergeLineage1][i]*n1 + distMatrix[mergeLineage2][i]*n2)/(double)ntot;
+        }
+        cladeSizes[mergeLineage1] += cladeSizes[mergeLineage2];
+
 
         // Swap pointers such that the lineage to discard is the last position
-        if (lineage2<k-1) {
+        if (mergeLineage2<k-1) {
             double[] tmpState = state[k-1];
-            state[k-1] = state[lineage2];
-            state[lineage2] = tmpState;
+            state[k-1] = state[mergeLineage2];
+            state[mergeLineage2] = tmpState;
+
+
+
+            mergeLineage2 = k-1;
         }
+
     }
 
-    public int computeMergeProbsAndSample(int k) {
+    public void computeMergeProbsAndSample(int k) {
 
-        int pIdx=0;
-        double maxVal = Double.NEGATIVE_INFINITY;
-        for (int i=0; i<k; i++) {
-            for (int j=0; j<i; j++) {
-                mergeProbs[pIdx] = 0.0;
-
-                for (int patIdx=0; patIdx<nPatterns; patIdx++) {
-                    double siteContrib = 0.0;
-                    for (int charIdx=0; charIdx<nChars; charIdx++) {
-                        siteContrib += state[i][patIdx*nChars+charIdx]*state[j][patIdx*nChars+charIdx];
-                    }
-                    mergeProbs[pIdx] += Math.log(siteContrib);
-                }
-
-                maxVal = Math.max(maxVal, mergeProbs[pIdx]);
-
-                pIdx+=1;
+        double cumsum = 0.0;
+        for (int lineage2=1; lineage2<k; lineage2++) {
+            for (int lineage1=0; lineage1<lineage2; lineage1++) {
+                mergeProbs[lineage2][lineage1] = Math.exp(minDist - distMatrix[lineage2][lineage1]);
+                cumsum += mergeProbs[lineage2][lineage1];
             }
         }
 
-        double cumsum = 0.0;
-        for (pIdx=0; pIdx<k*(k-1)/2; pIdx++) {
-            mergeProbs[pIdx] =  Math.exp(mergeProbs[pIdx] - maxVal);
-            cumsum += mergeProbs[pIdx];
-        }
-
         double u = Randomizer.nextDouble()*cumsum;
-        int mergePair;
-        for (mergePair=0; mergePair<k*(k-1)/2; mergePair++) {
-            u -= mergeProbs[mergePair];
-            if (u<0)
-                break;
+        for (mergeLineage2 =1; mergeLineage2 <k; mergeLineage2++) {
+            for (mergeLineage1 = 0; mergeLineage1 < mergeLineage2; mergeLineage1++) {
+                u -= mergeProbs[mergeLineage2][mergeLineage1];
+                if (u < 0)
+                    break;
+            }
         }
 
-        logWeight = -Math.log(mergeProbs[mergePair]) + Math.log(cumsum);
-        return mergePair;
+        logWeight = -Math.log(mergeProbs[mergeLineage2][mergeLineage1]) + Math.log(cumsum);
     }
 
     public void computeWeight(int k, double[] frequencies) {
@@ -158,8 +169,11 @@ public class Particle {
     }
 
     public void reset() {
-        for (int i=0; i<initialState.length; i++)
+        for (int i=0; i<nTaxa; i++) {
             System.arraycopy(initialState[i], 0, state[i], 0, initialState[i].length);
+            System.arraycopy(initialDistMatrix[i], 0, distMatrix[i], 0, initialDistMatrix[i].length);
+        }
+        Arrays.fill(cladeSizes, 1);
 
         logForestLik = 0.0;
         logPrevForestLik = 0.0;
@@ -170,7 +184,11 @@ public class Particle {
         for (int lineageIdx=0; lineageIdx<k; lineageIdx++) {
             System.arraycopy(other.state[lineageIdx], 0,
                     state[lineageIdx], 0, state[lineageIdx].length);
+            System.arraycopy(other.distMatrix[lineageIdx], 0,
+                    distMatrix[lineageIdx], 0, distMatrix[lineageIdx].length);
         }
+        System.arraycopy(other.cladeSizes, 0, cladeSizes, 0, cladeSizes.length);
+
         logWeight = other.logWeight;
         logForestLik = other.logForestLik;
         logPrevForestLik = other.logPrevForestLik;

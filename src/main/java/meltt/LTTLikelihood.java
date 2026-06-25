@@ -20,10 +20,10 @@
 package meltt;
 
 import beast.base.core.Input;
+import beast.base.evolution.distance.JukesCantorDistance;
 import beast.base.inference.Distribution;
 import beast.base.inference.State;
 import beast.base.spec.evolution.sitemodel.SiteModel;
-import beast.base.util.Randomizer;
 
 import java.util.List;
 import java.util.Random;
@@ -60,6 +60,8 @@ public class LTTLikelihood extends Distribution {
         nParticles = nParticlesInput.get();
         particles = new Particle[nParticles];
         particlesPrime = new Particle[nParticles];
+        JukesCantorDistance distanceFunc = new JukesCantorDistance();
+        distanceFunc.setPatterns(ltt.alignment);
         for (int i=0; i<nParticles; i++) {
             particles[i] = new Particle(ltt.alignment);
             particlesPrime[i] = new Particle(ltt.alignment);
@@ -125,6 +127,8 @@ public class LTTLikelihood extends Distribution {
                 logP = Math.log(cumSum) + maxLogWeight - Math.log(nParticles);
                 return logP;
             }
+
+            // Residual resampling
 
             double cumSumResiduals = 0.0;
             for (int pidx=0; pidx<nParticles; pidx++) {
