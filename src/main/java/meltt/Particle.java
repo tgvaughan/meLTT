@@ -39,7 +39,6 @@ public class Particle {
     double[][] initialDistMatrix, distMatrix, mergeProbs;
     int[] cladeSizes;
     int mergeLineage2, mergeLineage1;
-    double minDist;
 
     public Particle(Alignment alignment) {
         nChars = alignment.getMaxStateCount();
@@ -64,14 +63,11 @@ public class Particle {
         distMatrix = new double[nTaxa][nTaxa];
         initialDistMatrix = new double[nTaxa][nTaxa];
         cladeSizes = new int[nTaxa];
-        minDist = Double.POSITIVE_INFINITY;
         for (int i=1; i<nTaxa; i++) {
             cladeSizes[i]=1;
             for (int j=0; j<i; j++) {
                 distMatrix[i][j] = distanceFunc.pairwiseDistance(i,j);
                 initialDistMatrix[i][j] = distMatrix[i][j];
-                if (distMatrix[i][j]<minDist)
-                    minDist = distMatrix[i][j];
             }
         }
 
@@ -151,10 +147,21 @@ public class Particle {
 
     public void computeMergeProbsAndSample(int k) {
 
+        double minDist = Double.POSITIVE_INFINITY;
+        double maxDist = Double.NEGATIVE_INFINITY;
+        for (int lineage2=1;lineage2<k; lineage2++) {
+            for (int lineage1=0; lineage1<lineage2; lineage1++) {
+                if (distMatrix[lineage2][lineage1]<minDist)
+                    minDist = distMatrix[lineage2][lineage1];
+                if (distMatrix[lineage2][lineage1]>maxDist)
+                    maxDist = distMatrix[lineage2][lineage1];
+            }
+        }
+
         double cumsum = 0.0;
         for (int lineage2=1; lineage2<k; lineage2++) {
             for (int lineage1=0; lineage1<lineage2; lineage1++) {
-                mergeProbs[lineage2][lineage1] = Math.exp(10*(minDist - distMatrix[lineage2][lineage1]));
+                mergeProbs[lineage2][lineage1] = Math.exp(k*(minDist - distMatrix[lineage2][lineage1]));
                 cumsum += mergeProbs[lineage2][lineage1];
             }
         }
