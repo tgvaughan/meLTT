@@ -69,8 +69,6 @@ public class LTTLikelihood extends Distribution {
 
         logWeights = new double[nParticles];
         weightsWorking = new double[nParticles];
-
-        System.out.println("LTTLikelihood initialised.");
     }
 
     @Override
@@ -122,14 +120,13 @@ public class LTTLikelihood extends Distribution {
                 cumSum += weightsWorking[pidx];
             }
 
-            if (idx==ltt.t.length-1) {
-                // We're done.  Compute final likelihood estimate and quit.
-                logP = Math.log(cumSum) + maxLogWeight - Math.log(nParticles);
+            // Update likelihood estimate;
+            logP += Math.log(cumSum) + maxLogWeight - Math.log(nParticles);
+
+            if (idx==ltt.k.length-1)
                 return logP;
-            }
 
             // Residual resampling
-
             double cumSumResiduals = 0.0;
             for (int pidx=0; pidx<nParticles; pidx++) {
                 weightsWorking[pidx] *= nParticles / cumSum;

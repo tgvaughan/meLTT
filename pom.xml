@@ -40,7 +40,7 @@
         <beast.module>beast.base</beast.module>
         <beast.main>beast.base.minimal.BeastMain</beast.main>
         <beast.args/>
-        <beast.pkg.name>TopSMC</beast.pkg.name>
+        <beast.pkg.name>meLTT</beast.pkg.name>
         <beast.pkg.version>0.0.1</beast.pkg.version>
     </properties>
 

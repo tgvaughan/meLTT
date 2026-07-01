@@ -21,6 +21,7 @@ package meltt;
 
 import beast.base.evolution.alignment.Alignment;
 import beast.base.evolution.distance.JukesCantorDistance;
+import beast.base.util.Binomial;
 import beast.base.util.Randomizer;
 
 import java.util.Arrays;
@@ -34,7 +35,7 @@ public class Particle {
     int nChars;
     int nTaxa;
 
-    double logForestLik, logPrevForestLik, logWeight;
+    double logPrevForestLik, logWeight;
 
     double[][] initialDistMatrix, distMatrix, mergeProbs;
     int[] cladeSizes;
@@ -147,21 +148,10 @@ public class Particle {
 
     public void computeMergeProbsAndSample(int k) {
 
-        double minDist = Double.POSITIVE_INFINITY;
-        double maxDist = Double.NEGATIVE_INFINITY;
-        for (int lineage2=1;lineage2<k; lineage2++) {
-            for (int lineage1=0; lineage1<lineage2; lineage1++) {
-                if (distMatrix[lineage2][lineage1]<minDist)
-                    minDist = distMatrix[lineage2][lineage1];
-                if (distMatrix[lineage2][lineage1]>maxDist)
-                    maxDist = distMatrix[lineage2][lineage1];
-            }
-        }
-
         double cumsum = 0.0;
         for (int lineage2=1; lineage2<k; lineage2++) {
             for (int lineage1=0; lineage1<lineage2; lineage1++) {
-                mergeProbs[lineage2][lineage1] = Math.exp(k*(minDist - distMatrix[lineage2][lineage1]));
+                mergeProbs[lineage2][lineage1] = Math.exp(-k*distMatrix[lineage2][lineage1]);
                 cumsum += mergeProbs[lineage2][lineage1];
             }
         }
@@ -177,13 +167,12 @@ public class Particle {
                 break;
         }
 
-//        printMatrix(mergeProbs, k, "Merge prob");
-
-        logWeight = -Math.log(mergeProbs[mergeLineage2][mergeLineage1]) + Math.log(cumsum);
+        logWeight = -Math.log(mergeProbs[mergeLineage2][mergeLineage1])
+                + Math.log(cumsum) - Binomial.logChoose(k, 2);
     }
 
     public void computeWeight(int k, double[] frequencies) {
-        logForestLik = 0.0;
+        double logForestLik = 0.0;
         for (int lineageIdx=0; lineageIdx<k; lineageIdx++) {
             for (int patIdx=0; patIdx<nPatterns; patIdx++) {
                 double siteWeight = 0.0;
@@ -199,12 +188,13 @@ public class Particle {
 
     public void reset() {
         for (int i=0; i<nTaxa; i++) {
-            System.arraycopy(initialState[i], 0, state[i], 0, initialState[i].length);
-            System.arraycopy(initialDistMatrix[i], 0, distMatrix[i], 0, initialDistMatrix[i].length);
+            System.arraycopy(initialState[i], 0, state[i],
+                    0, initialState[i].length);
+            System.arraycopy(initialDistMatrix[i], 0, distMatrix[i],
+                    0, initialDistMatrix[i].length);
         }
         Arrays.fill(cladeSizes, 1);
 
-        logForestLik = 0.0;
         logPrevForestLik = 0.0;
         logWeight = 0.0;
     }
@@ -219,7 +209,6 @@ public class Particle {
         System.arraycopy(other.cladeSizes, 0, cladeSizes, 0, cladeSizes.length);
 
         logWeight = other.logWeight;
-        logForestLik = other.logForestLik;
         logPrevForestLik = other.logPrevForestLik;
     }
 
