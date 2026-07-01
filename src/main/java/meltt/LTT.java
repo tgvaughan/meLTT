@@ -21,6 +21,7 @@ package meltt;
 
 import beast.base.core.Input;
 import beast.base.core.Log;
+import beast.base.core.Loggable;
 import beast.base.evolution.alignment.Alignment;
 import beast.base.evolution.tree.TraitSet;
 import beast.base.inference.CalculationNode;
@@ -31,11 +32,27 @@ import beast.base.spec.type.RealScalar;
 import beast.base.spec.type.Simplex;
 import beast.base.util.Randomizer;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class LTT extends CalculationNode {
+/**
+ * Instances of this class represent an LTT function.
+ *
+ * The LTT function itself is computed from the tMRCA, the set of
+ * inter-coalescent interval durations relative to the tMRCA, and
+ * (optionally) a traitset specifying tip sampling times.
+ *
+ * On initialization the relCoalInterval input parameter
+ * is modified such that its dimension matches the number of
+ * intervals requires by the number of taxa.
+ *
+ * The computed LTT function is exposed via the public fields t[] and k[].
+ *
+ * Tip age sampling is not (yet?) supported.
+ */
+public class LTT extends CalculationNode implements Loggable {
 
     public Input<Simplex> relCoalIntervalsInput = new Input<>("relCoalIntervals",
             "Intervals between coalescent events, relative to tMRCA",
@@ -213,5 +230,36 @@ public class LTT extends CalculationNode {
     protected void restore() {
         super.restore();
         updateLTT();
+    }
+
+    /*
+     * Loggable implementation
+     */
+
+    @Override
+    public void init(PrintStream out) {
+
+        updateLTT();
+        for (int i=0; i<k.length; i++) {
+            out.format("k%d\t", i);
+        }
+        for (int i=0; i<k.length; i++) {
+            out.format("t%d\t", i);
+        }
+    }
+
+    @Override
+    public void log(long sample, PrintStream out) {
+        updateLTT();
+        for (int i=0; i<k.length; i++) {
+            out.format("%d\t", k[i]);
+        }
+        for (int i=0; i<k.length; i++) {
+            out.format("%g\t", t[i]);
+        }
+    }
+
+    @Override
+    public void close(PrintStream out) {
     }
 }

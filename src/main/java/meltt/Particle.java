@@ -91,11 +91,7 @@ public class Particle {
 
     public void mergeLineages(int k) {
 
-//        printMatrix(distMatrix, k, "Distance");
-
         computeMergeProbsAndSample(k);
-
-//        System.out.println("Merging lineages " + mergeLineage1 + " and " + mergeLineage2);
 
         // Compute the merged lineage likelihoods and store in the space occupied
         // by lineage1
@@ -143,7 +139,6 @@ public class Particle {
             mergeLineage2 = k-1;
         }
 
-//        printMatrix(distMatrix, k-1, "Distance");
     }
 
     public void computeMergeProbsAndSample(int k) {

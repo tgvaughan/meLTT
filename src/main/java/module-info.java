@@ -12,5 +12,6 @@ open module meltt {
             meltt.LTTLikelihood,
             meltt.LTT,
             meltt.CoalescentLTTPrior,
-            meltt.AdjacentDeltaExchangeOperator;
+            meltt.AdjacentDeltaExchangeOperator,
+            meltt.util.LTTFromTreeLogger;
 }
